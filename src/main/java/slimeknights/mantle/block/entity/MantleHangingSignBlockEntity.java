@@ -13,17 +13,17 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-/** Sign block entity to make it easier for signs to be registered, as the vanilla block entity has a closed set of blocks */
-public class MantleSignBlockEntity extends SignBlockEntity {
-  /** Sign blocks to use for the blcok entity valid blocks */
+/** Hanging sign block entity to make it easier for signs to be registered, as the vanilla block entity has a closed set of blocks */
+public class MantleHangingSignBlockEntity extends SignBlockEntity {
+  /** Sign blocks to use for the block entity valid blocks */
   private static final List<Supplier<? extends Block>> SIGN_BLOCKS = new ArrayList<>();
-  public MantleSignBlockEntity(BlockPos pos, BlockState state) {
+  public MantleHangingSignBlockEntity(BlockPos pos, BlockState state) {
     super(pos, state);
   }
 
   @Override
   public BlockEntityType<?> getType() {
-    return MantleRegistrations.SIGN;
+    return MantleRegistrations.HANGING_SIGN;
   }
 
   /**
