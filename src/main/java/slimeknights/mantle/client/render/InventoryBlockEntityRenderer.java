@@ -10,10 +10,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 
-/** @deprecated use {@link InventoryBlockEntityRenderer} for the new render item registry. */
-@Deprecated(forRemoval = true)
-public class InventoryTileEntityRenderer<T extends BlockEntity & Container> implements BlockEntityRenderer<T> {
-  public InventoryTileEntityRenderer(BlockEntityRendererProvider.Context context) {}
+public class InventoryBlockEntityRenderer<T extends BlockEntity & Container> implements BlockEntityRenderer<T> {
+  public InventoryBlockEntityRenderer(BlockEntityRendererProvider.Context context) {}
 
   @Override
   public void render(T inventory, float partialTicks, PoseStack matrices, MultiBufferSource buffer, int light, int combinedOverlayIn) {
@@ -21,7 +19,7 @@ public class InventoryTileEntityRenderer<T extends BlockEntity & Container> impl
 
     // first, find the model for item display locations
     BlockState state = inventory.getBlockState();
-    List<RenderItem> renderItems = RenderItem.REGISTRY.get(state.getBlock(), List.of());
+    List<RenderItem> renderItems = RenderItem.STATE_REGISTRY.get(state, List.of());
     if (!renderItems.isEmpty()) {
       // if the block is rotatable, rotate item display
       boolean isRotated = RenderingHelper.applyRotation(matrices, state);
