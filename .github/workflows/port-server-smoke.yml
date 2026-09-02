@@ -52,14 +52,33 @@ jobs:
         shell: bash
         run: |
           set +e
-          timeout --signal=INT 240s ./gradlew runServer --no-daemon > server-console.log 2>&1
-          status=$?
-          set -e
+          ./gradlew runServer --no-daemon > server-console.log 2>&1 &
+          server_pid=$!
+          ready=0
 
-          if grep -Eq 'Done \([0-9.]+s\)!|Done \(' run/server/logs/latest.log server-console.log 2>/dev/null; then
+          for _ in $(seq 1 180); do
+            if grep -Eq 'Done \([0-9.]+s\)!|Done \(' run/server/logs/latest.log server-console.log 2>/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -eq 1 ]; then
             echo 'Dedicated server reached the ready state successfully.'
+            kill -INT "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
             exit 0
           fi
+
+          if kill -0 "$server_pid" 2>/dev/null; then
+            kill -INT "$server_pid" 2>/dev/null || true
+          fi
+          wait "$server_pid" 2>/dev/null
+          status=$?
 
           echo "Server did not reach ready state (command status: $status)."
           echo '--- server console tail ---'
