@@ -69,18 +69,19 @@ jobs:
 
           if [ "$ready" -eq 1 ]; then
             echo 'Dedicated server reached the ready state successfully.'
-            kill -INT "$server_pid" 2>/dev/null || true
-            wait "$server_pid" 2>/dev/null || true
+            kill -TERM "$server_pid" 2>/dev/null || true
+            sleep 2
+            kill -KILL "$server_pid" 2>/dev/null || true
             exit 0
           fi
 
           if kill -0 "$server_pid" 2>/dev/null; then
-            kill -INT "$server_pid" 2>/dev/null || true
+            kill -TERM "$server_pid" 2>/dev/null || true
+            sleep 2
+            kill -KILL "$server_pid" 2>/dev/null || true
           fi
-          wait "$server_pid" 2>/dev/null
-          status=$?
 
-          echo "Server did not reach ready state (command status: $status)."
+          echo 'Server did not reach ready state.'
           echo '--- server console tail ---'
           tail -n 250 server-console.log || true
           echo '--- latest.log tail ---'
