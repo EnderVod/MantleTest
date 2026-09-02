@@ -58,9 +58,6 @@ public abstract class InventoryBlock extends Block implements EntityBlock {
   @Deprecated
   @Override
   protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult rayTraceResult) {
-    if (player.isSuppressingBounce()) {
-      return InteractionResult.PASS;
-    }
     if (!world.isClientSide) {
       return this.openGui(player, world, pos) ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
