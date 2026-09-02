@@ -10,8 +10,8 @@ import net.minecraft.commands.synchronization.SuggestionProviders;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.neoforge.common.MinecraftForge;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.book.BookLoader;
 

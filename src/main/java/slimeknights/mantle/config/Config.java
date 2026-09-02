@@ -1,9 +1,9 @@
 package slimeknights.mantle.config;
 
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
-import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
-import net.minecraftforge.common.ForgeConfigSpec.EnumValue;
+import net.neoforged.neoforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ForgeConfigSpec.BooleanValue;
+import net.neoforged.neoforge.common.ForgeConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ForgeConfigSpec.EnumValue;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
 import java.util.Arrays;

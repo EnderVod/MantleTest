@@ -16,7 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.TierSortingRegistry;
+import net.neoforged.neoforge.common.TierSortingRegistry;
 import slimeknights.mantle.Mantle;
 
 import java.io.BufferedWriter;
