@@ -49,4 +49,6 @@ jobs:
             exit 0
           fi
           git commit -m "Regenerate Mantle resources for Minecraft 1.21.1"
+          git fetch origin 1.21.1-neoforge
+          git rebase origin/1.21.1-neoforge
           git push origin HEAD:1.21.1-neoforge
