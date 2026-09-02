@@ -1,69 +1,38 @@
 package slimeknights.mantle.util;
 
 import lombok.RequiredArgsConstructor;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.common.MinecraftForge;
-import net.neoforged.neoforge.common.capabilities.Capability;
-import net.neoforged.neoforge.common.capabilities.CapabilityManager;
-import net.neoforged.neoforge.common.capabilities.CapabilityToken;
-import net.neoforged.neoforge.common.capabilities.ICapabilityProvider;
-import net.neoforged.neoforge.common.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.util.LazyOptional;
-import net.neoforged.neoforge.common.util.NonNullFunction;
-import net.neoforged.neoforge.event.AttachCapabilitiesEvent;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.network.MantleNetwork;
 import slimeknights.mantle.network.packet.SwingArmPacket;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import static slimeknights.mantle.util.LogicHelper.orElseNull;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.function.Function;
 
 /**
  * Logic to handle offhand having its own cooldown
  */
 @RequiredArgsConstructor
-public class OffhandCooldownTracker implements ICapabilityProvider {
+public class OffhandCooldownTracker {
   public static final ResourceLocation KEY = Mantle.getResource("offhand_cooldown");
+  private static final Map<Player,OffhandCooldownTracker> TRACKERS = new WeakHashMap<>();
   /** @deprecated use {@link #get(Player)} */
   @Deprecated(forRemoval = true)
-  public static final NonNullFunction<OffhandCooldownTracker,Float> COOLDOWN_TRACKER = OffhandCooldownTracker::getCooldown;
-
-  /**
-   * Capability instance for offhand cooldown
-   */
-  public static final Capability<OffhandCooldownTracker> CAPABILITY = CapabilityManager.get(new CapabilityToken<>() {});
+  public static final Function<OffhandCooldownTracker,Float> COOLDOWN_TRACKER = OffhandCooldownTracker::getCooldown;
 
   /** Registers the capability and subscribes to event listeners */
-  public static void init() {
-    MinecraftForge.EVENT_BUS.addGenericListener(Entity.class, OffhandCooldownTracker::attachCapability);
-  }
+  public static void init() {}
 
   /** Registers the capability with the event bus */
-  public static void register(RegisterCapabilitiesEvent event) {
-    event.register(OffhandCooldownTracker.class);
-  }
+  public static void register(RegisterCapabilitiesEvent event) {}
 
-  /**
-   * Called to add the capability handler to all players
-   * @param event  Event
-   */
-  private static void attachCapability(AttachCapabilitiesEvent<Entity> event) {
-    Entity entity = event.getObject();
-    if (entity instanceof Player player) {
-      event.addCapability(KEY, new OffhandCooldownTracker(player));
-    }
-  }
-
-  /** Lazy optional of self for capability requirements */
-  private final LazyOptional<OffhandCooldownTracker> capabilityInstance = LazyOptional.of(() -> this);
   /** Player receiving cooldowns */
   @Nullable
   private final Player player;
@@ -74,12 +43,6 @@ public class OffhandCooldownTracker implements ICapabilityProvider {
 
   /** Enables the cooldown tracker if above 0. Intended to be set in equipment change events, not serialized */
   private int enabled = 0;
-
-  @Nonnull
-  @Override
-  public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
-    return cap == CAPABILITY ? this.capabilityInstance.cast() : LazyOptional.empty();
-  }
 
   /** Null safe way to get the player's ticks existed */
   private int getTicksExisted() {
@@ -96,7 +59,7 @@ public class OffhandCooldownTracker implements ICapabilityProvider {
   }
 
   /**
-   * Call this method when your item causing offhand cooldown to be needed is enabled and disabled. If multiple placces call this, the tracker will automatically keep enabled until all places disable
+   * Call this method when your item causing offhand cooldown to be needed is enabled and disabled. If multiple places call this, the tracker will automatically keep enabled until all places disable
    * @param enable  If true, enable. If false, disable
    * @deprecated No longer used, so you can just remove calls.
    */
@@ -109,19 +72,13 @@ public class OffhandCooldownTracker implements ICapabilityProvider {
     }
   }
 
-  /**
-   * Applies the given amount of cooldown
-   * @param cooldown  Coolddown amount
-   */
+  /** Applies the given amount of cooldown */
   public void applyCooldown(int cooldown) {
     this.lastCooldown = cooldown;
     this.attackReady = getTicksExisted() + cooldown;
   }
 
-  /**
-   * Returns a number from 0 to 1 denoting the current cooldown amount, akin to {@link Player#getAttackStrengthScale(float)}
-   * @return  number from 0 to 1, with 1 being no cooldown
-   */
+  /** Returns a number from 0 to 1 denoting the current cooldown amount. */
   public float getCooldown() {
     int ticksExisted = getTicksExisted();
     if (ticksExisted > this.attackReady || this.lastCooldown == 0) {
@@ -130,38 +87,24 @@ public class OffhandCooldownTracker implements ICapabilityProvider {
     return Mth.clamp((this.lastCooldown + ticksExisted - this.attackReady) / (float) this.lastCooldown, 0f, 1f);
   }
 
-  /**
-   * Checks if we can perform another attack yet.
-   * This counteracts rapid attacks via click macros, in a similar way to vanilla by limiting to once every 10 ticks
-   */
+  /** Checks if we can perform another attack yet. */
   public boolean isAttackReady() {
     return getTicksExisted() + this.lastCooldown > this.attackReady;
   }
 
-
-  /* Helpers */
-
-  /** Gets the tracker instance for the target entity */
+  /** Gets the tracker instance for the target entity. */
   @Nullable
   public static OffhandCooldownTracker get(Player player) {
-    return orElseNull(player.getCapability(OffhandCooldownTracker.CAPABILITY));
+    return TRACKERS.computeIfAbsent(player, OffhandCooldownTracker::new);
   }
 
-  /**
-   * Gets the offhand cooldown for the given player
-   * @param player  Player
-   * @return  Offhand cooldown
-   */
+  /** Gets the offhand cooldown for the given player. */
   public static float getCooldown(Player player) {
     OffhandCooldownTracker tracker = get(player);
     return tracker != null ? tracker.getCooldown() : 1.0f;
   }
 
-  /**
-   * Applies cooldown to the given player
-   * @param player  Player
-   * @param cooldown  Cooldown to apply
-   */
+  /** Applies cooldown to the given player. */
   public static void applyCooldown(Player player, int cooldown) {
     OffhandCooldownTracker tracker = get(player);
     if (tracker != null) {
@@ -169,20 +112,13 @@ public class OffhandCooldownTracker implements ICapabilityProvider {
     }
   }
 
-  /**
-   * Applies cooldown to the given player
-   * @param player  Player
-   */
+  /** Checks whether the player's offhand attack is ready. */
   public static boolean isAttackReady(Player player) {
     OffhandCooldownTracker tracker = get(player);
     return tracker == null || tracker.isAttackReady();
   }
 
-  /**
-   * Applies cooldown using attack speed
-   * @param attackSpeed   Attack speed of the held item
-   * @param cooldownTime  Relative cooldown time for the given source, 20 is vanilla
-   */
+  /** Applies cooldown using attack speed. */
   public static void applyCooldown(Player player, float attackSpeed, int cooldownTime) {
     applyCooldown(player, Math.round(cooldownTime / attackSpeed));
   }
