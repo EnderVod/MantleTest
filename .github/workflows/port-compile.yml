@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mantle-port-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   compile:
     runs-on: ubuntu-latest
