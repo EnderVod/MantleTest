@@ -2,7 +2,7 @@ package slimeknights.mantle.recipe.crafting;
 
 import com.google.gson.JsonObject;
 import lombok.RequiredArgsConstructor;
-import net.minecraft.data.recipes.FinishedRecipe;
+import slimeknights.mantle.recipe.data.FinishedRecipe;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -10,7 +10,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import slimeknights.mantle.Mantle;
+import slimeknights.mantle.data.loadable.common.IngredientLoadable;
 import slimeknights.mantle.recipe.MantleRecipes;
+import slimeknights.mantle.recipe.data.VanillaFinishedRecipe;
 
 import javax.annotation.Nullable;
 import java.util.function.Consumer;
@@ -66,7 +68,7 @@ public class ShapedRetexturedRecipeBuilder {
    */
   public void build(Consumer<FinishedRecipe> consumer) {
     this.validate();
-    parent.save(base -> consumer.accept(new Result(base)));
+    parent.save(VanillaFinishedRecipe.output(base -> consumer.accept(new Result(base))));
   }
 
   /**
@@ -76,7 +78,7 @@ public class ShapedRetexturedRecipeBuilder {
    */
   public void build(Consumer<FinishedRecipe> consumer, ResourceLocation location) {
     this.validate();
-    parent.save(base -> consumer.accept(new Result(base)), location);
+    parent.save(VanillaFinishedRecipe.output(base -> consumer.accept(new Result(base))), location);
   }
 
   /**
@@ -112,7 +114,7 @@ public class ShapedRetexturedRecipeBuilder {
       if (textureKey != '\0') {
         json.addProperty("texture", textureKey);
       } else if (texture != null) {
-        json.add("texture", texture.toJson());
+        json.add("texture", IngredientLoadable.DISALLOW_EMPTY.serialize(texture));
         Mantle.logger.warn("Using deprecated ingredient format on texture for shaped retextured recipe {}. Use key instead.", getId());
       }
       json.addProperty("match_all", matchAll);

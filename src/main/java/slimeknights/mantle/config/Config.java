@@ -1,9 +1,9 @@
 package slimeknights.mantle.config;
 
-import net.neoforged.neoforge.common.ForgeConfigSpec;
-import net.neoforged.neoforge.common.ForgeConfigSpec.BooleanValue;
-import net.neoforged.neoforge.common.ForgeConfigSpec.ConfigValue;
-import net.neoforged.neoforge.common.ForgeConfigSpec.EnumValue;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec.BooleanValue;
+import net.neoforged.neoforge.common.ModConfigSpec.ConfigValue;
+import net.neoforged.neoforge.common.ModConfigSpec.EnumValue;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
 import java.util.Arrays;
@@ -24,18 +24,15 @@ public class Config {
   /** If true, enables the fluid fog fix. If false, disables it for better shader compatability. */
   public static final BooleanValue ENABLE_FLUID_FOG_FIX;
 
-  /** If true, the fallback shader for fluid uses a text shader, which provides better compatability. */
-  public static final BooleanValue FLUID_USE_TEXT_SHADER;
-
 	/** List of preferences for tag outputs */
 	private static final List<String> DEFAULT_TAG_PREFERENCES = Arrays.asList("minecraft", "tconstruct", "tmechworks", "metalborn", "embers", "create", "immersiveengineering", "mekanism", "thermal");
 	public static final ConfigValue<List<? extends String>> TAG_PREFERENCES;
 
-	public static final ForgeConfigSpec CLIENT_SPEC, SERVER_SPEC;
+	public static final ModConfigSpec CLIENT_SPEC, SERVER_SPEC;
 
 	static {
-    ForgeConfigSpec.Builder client = new ForgeConfigSpec.Builder();
-    ForgeConfigSpec.Builder server = new ForgeConfigSpec.Builder();
+    ModConfigSpec.Builder client = new ModConfigSpec.Builder();
+    ModConfigSpec.Builder server = new ModConfigSpec.Builder();
 
 		// client options
     HEART_RENDERER = client
@@ -49,19 +46,11 @@ public class Config {
 
     ENABLE_FLUID_FOG_FIX = client
       .comment(
-        "If true, fluids properly have their lighting adjusted under vanilla fog effects such as blindness. If false, they render as nearly fullbright ignoring fog and have limited light level support.",
+        "If true, fluids properly have their lighting adjusted under vanilla fog effects such as blindness. If false, they render as nearly fullbright ignoring fog.",
         "This config option is provided as the fix breaks shaders, and slightly broken is better than fully broken.",
         "Best fix is to fix your shaders though, so you can have no broken visuals.")
       .translation("config.mantle.enableFluidFogFix")
       .define("enableFluidFogFix", true);
-
-    FLUID_USE_TEXT_SHADER = client
-      .comment(
-        "If true, the fallback shader for fluid uses a text shader, which provides better compatability. If false, uses the generic position color tex lightmap shader.",
-        "The text shader provides a fallback with more functionality than the generic one, but may be unexpected by other custom rendering.",
-        "Does nothing if enableFluidFogFix is true.")
-      .translation("config.mantle.fluidFallbackUseTextShader")
-      .define("fluidFallbackUseTextShader", true);
 
 		// server options
 		TAG_PREFERENCES = server.comment("Preferences for outputs from tags used in automatic compat in recipes")

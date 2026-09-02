@@ -12,9 +12,9 @@ import slimeknights.mantle.network.MantleNetwork;
 import slimeknights.mantle.network.packet.SwingArmPacket;
 
 import javax.annotation.Nullable;
+import java.util.function.Function;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.function.Function;
 
 /**
  * Logic to handle offhand having its own cooldown
@@ -59,7 +59,7 @@ public class OffhandCooldownTracker {
   }
 
   /**
-   * Call this method when your item causing offhand cooldown to be needed is enabled and disabled. If multiple places call this, the tracker will automatically keep enabled until all places disable
+   * Call this method when your item causing offhand cooldown to be needed is enabled and disabled. If multiple placces call this, the tracker will automatically keep enabled until all places disable
    * @param enable  If true, enable. If false, disable
    * @deprecated No longer used, so you can just remove calls.
    */
@@ -72,13 +72,19 @@ public class OffhandCooldownTracker {
     }
   }
 
-  /** Applies the given amount of cooldown */
+  /**
+   * Applies the given amount of cooldown
+   * @param cooldown  Coolddown amount
+   */
   public void applyCooldown(int cooldown) {
     this.lastCooldown = cooldown;
     this.attackReady = getTicksExisted() + cooldown;
   }
 
-  /** Returns a number from 0 to 1 denoting the current cooldown amount. */
+  /**
+   * Returns a number from 0 to 1 denoting the current cooldown amount, akin to {@link Player#getAttackStrengthScale(float)}
+   * @return  number from 0 to 1, with 1 being no cooldown
+   */
   public float getCooldown() {
     int ticksExisted = getTicksExisted();
     if (ticksExisted > this.attackReady || this.lastCooldown == 0) {
@@ -87,24 +93,38 @@ public class OffhandCooldownTracker {
     return Mth.clamp((this.lastCooldown + ticksExisted - this.attackReady) / (float) this.lastCooldown, 0f, 1f);
   }
 
-  /** Checks if we can perform another attack yet. */
+  /**
+   * Checks if we can perform another attack yet.
+   * This counteracts rapid attacks via click macros, in a similar way to vanilla by limiting to once every 10 ticks
+   */
   public boolean isAttackReady() {
     return getTicksExisted() + this.lastCooldown > this.attackReady;
   }
 
-  /** Gets the tracker instance for the target entity. */
+
+  /* Helpers */
+
+  /** Gets the tracker instance for the target entity */
   @Nullable
   public static OffhandCooldownTracker get(Player player) {
     return TRACKERS.computeIfAbsent(player, OffhandCooldownTracker::new);
   }
 
-  /** Gets the offhand cooldown for the given player. */
+  /**
+   * Gets the offhand cooldown for the given player
+   * @param player  Player
+   * @return  Offhand cooldown
+   */
   public static float getCooldown(Player player) {
     OffhandCooldownTracker tracker = get(player);
     return tracker != null ? tracker.getCooldown() : 1.0f;
   }
 
-  /** Applies cooldown to the given player. */
+  /**
+   * Applies cooldown to the given player
+   * @param player  Player
+   * @param cooldown  Cooldown to apply
+   */
   public static void applyCooldown(Player player, int cooldown) {
     OffhandCooldownTracker tracker = get(player);
     if (tracker != null) {
@@ -112,13 +132,20 @@ public class OffhandCooldownTracker {
     }
   }
 
-  /** Checks whether the player's offhand attack is ready. */
+  /**
+   * Applies cooldown to the given player
+   * @param player  Player
+   */
   public static boolean isAttackReady(Player player) {
     OffhandCooldownTracker tracker = get(player);
     return tracker == null || tracker.isAttackReady();
   }
 
-  /** Applies cooldown using attack speed. */
+  /**
+   * Applies cooldown using attack speed
+   * @param attackSpeed   Attack speed of the held item
+   * @param cooldownTime  Relative cooldown time for the given source, 20 is vanilla
+   */
   public static void applyCooldown(Player player, float attackSpeed, int cooldownTime) {
     applyCooldown(player, Math.round(cooldownTime / attackSpeed));
   }
