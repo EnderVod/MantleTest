@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.crafting.CraftingHelper;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
@@ -21,12 +21,10 @@ import net.neoforged.neoforge.data.event.GatherDataEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig.Type;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.registries.ForgeRegistries;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.apache.logging.log4j.LogManager;
@@ -95,29 +93,28 @@ public class Mantle {
   public static final String modId = "mantle";
   public static final Logger logger = LogManager.getLogger("Mantle");
   /** Namespace for common tags, used for easier migration to the future "c" standard */
-  public static final String COMMON = "forge";
+  public static final String COMMON = "c";
 
   /* Instance of this mod, used for grabbing prototype fields */
   public static Mantle instance;
 
   /* Proxies for sides, used for graphics processing */
-  public Mantle() {
-    ModLoadingContext.get().registerConfig(Type.CLIENT, Config.CLIENT_SPEC);
-    ModLoadingContext.get().registerConfig(Type.SERVER, Config.SERVER_SPEC);
+  public Mantle(IEventBus bus, ModContainer modContainer, Dist dist) {
+    modContainer.registerConfig(Type.CLIENT, Config.CLIENT_SPEC);
+    modContainer.registerConfig(Type.SERVER, Config.SERVER_SPEC);
 
     FluidContainerTransferManager.INSTANCE.init();
     MantleTags.init();
 
     instance = this;
-    IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
     bus.addListener(EventPriority.NORMAL, false, FMLCommonSetupEvent.class, this::commonSetup);
     bus.addListener(EventPriority.NORMAL, false, RegisterCapabilitiesEvent.class, this::registerCapabilities);
     bus.addListener(EventPriority.NORMAL, false, GatherDataEvent.class, this::gatherData);
     bus.addListener(EventPriority.NORMAL, false, RegisterEvent.class, this::register);
     MantleRecipes.init(bus);
-    MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, PlayerInteractEvent.RightClickBlock.class, LecternBookItem::interactWithBlock);
+    NeoForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, PlayerInteractEvent.RightClickBlock.class, LecternBookItem::interactWithBlock);
 
-    if (FMLEnvironment.dist == Dist.CLIENT) {
+    if (dist == Dist.CLIENT) {
       ClientEvents.onConstruct();
     }
   }
@@ -250,7 +247,7 @@ public class Mantle {
    * @return  Resource location instance
    */
   public static ResourceLocation getResource(String name) {
-    return new ResourceLocation(modId, name);
+    return ResourceLocation.fromNamespaceAndPath(modId, name);
   }
 
   /**
@@ -259,7 +256,7 @@ public class Mantle {
    * @return  Resource location instance
    */
   public static ResourceLocation commonResource(String name) {
-    return new ResourceLocation(COMMON, name);
+    return ResourceLocation.fromNamespaceAndPath(COMMON, name);
   }
 
   /**
