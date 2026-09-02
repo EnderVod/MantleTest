@@ -3,8 +3,10 @@ package slimeknights.mantle.fluid.transfer;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.fluids.FluidStack;
 import slimeknights.mantle.Mantle;
@@ -21,8 +23,9 @@ public class FillFluidWithNBTTransfer extends FillFluidContainerTransfer {
   @Override
   protected ItemStack getFilled(FluidStack drained) {
     ItemStack filled = super.getFilled(drained);
-    if (drained.hasTag()) {
-      filled.setTag(drained.getTag().copy());
+    CustomData data = drained.get(DataComponents.CUSTOM_DATA);
+    if (data != null) {
+      filled.set(DataComponents.CUSTOM_DATA, data);
     }
     return filled;
   }

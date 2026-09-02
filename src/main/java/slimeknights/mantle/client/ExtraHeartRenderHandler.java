@@ -12,10 +12,9 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
-import net.neoforged.neoforge.client.gui.overlay.ForgeGui;
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
-import net.neoforged.neoforge.common.MinecraftForge;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import slimeknights.mantle.Mantle;
@@ -25,8 +24,8 @@ import slimeknights.mantle.config.Config.HeartRenderer;
 import java.util.Random;
 
 public class ExtraHeartRenderHandler {
-  private static final ResourceLocation ICON_HEARTS = new ResourceLocation(Mantle.modId, "textures/gui/extra_hearts.png");
-  private static final ResourceLocation ICON_VANILLA = Gui.GUI_ICONS_LOCATION;
+  private static final ResourceLocation ICON_HEARTS = ResourceLocation.fromNamespaceAndPath(Mantle.modId, "textures/gui/extra_hearts.png");
+  private static final ResourceLocation ICON_VANILLA = ResourceLocation.withDefaultNamespace("textures/gui/icons.png");
   /** Number of heart color variants */
   private static final int HEART_VARIANTS = 12;
   /** Number of heart color variants */
@@ -80,21 +79,19 @@ public class ExtraHeartRenderHandler {
    * @param event  Event instance
    */
   @SubscribeEvent(priority = EventPriority.LOW)
-  public void renderHealthbar(RenderGuiOverlayEvent.Pre event) {
+  public void renderHealthbar(RenderGuiLayerEvent.Pre event) {
     HeartRenderer renderer = Config.HEART_RENDERER.get();
-    if (renderer == HeartRenderer.DISABLE || event.isCanceled() || event.getOverlay() != VanillaGuiOverlay.PLAYER_HEALTH.type()) {
+    if (renderer == HeartRenderer.DISABLE || event.isCanceled() || !VanillaGuiLayers.PLAYER_HEALTH.equals(event.getName())) {
       return;
     }
-    // ensure its visible
-    if (!(mc.gui instanceof ForgeGui gui) || mc.options.hideGui || !gui.shouldDrawSurvivalElements()) {
+    Gui gui = mc.gui;
+    if (mc.options.hideGui || mc.gameMode == null || !mc.gameMode.canHurtPlayer()) {
       return;
     }
     Entity renderViewEnity = this.mc.getCameraEntity();
     if (!(renderViewEnity instanceof Player player)) {
       return;
     }
-    gui.setupOverlayRenderState(true, false);
-
     this.mc.getProfiler().push("health");
 
     // based on the top of Gui#renderPlayerHealth
@@ -231,7 +228,7 @@ public class ExtraHeartRenderHandler {
     RenderSystem.disableBlend();
     this.mc.getProfiler().pop();
     //noinspection UnstableApiUsage  I do what I want (more accurately, we override the renderer but want to let others still respond in post)
-    MinecraftForge.EVENT_BUS.post(new RenderGuiOverlayEvent.Post(event.getWindow(), graphics, event.getPartialTick(), VanillaGuiOverlay.PLAYER_HEALTH.type()));
+    NeoForge.EVENT_BUS.post(new RenderGuiLayerEvent.Post(graphics, event.getPartialTick(), VanillaGuiLayers.PLAYER_HEALTH, event.getLayer()));
   }
 
   /** Computes the color U offset for a given heart index */

@@ -1,0 +1,2 @@
+Translated 597 Hilt Java files from Modern-Mods/Hilt Neo/1.21.1.
+This branch is an experiment only; the main 1.21.1-neoforge branch remains independent.

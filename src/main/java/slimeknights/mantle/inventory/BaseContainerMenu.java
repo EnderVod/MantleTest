@@ -1,6 +1,6 @@
 package slimeknights.mantle.inventory;
 
-import net.minecraft.core.BlockPos;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
@@ -13,8 +13,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import slimeknights.mantle.Mantle;
-import slimeknights.mantle.client.SafeClientAccess;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import slimeknights.mantle.util.BlockEntityHelper;
 
 import javax.annotation.Nullable;
@@ -232,7 +232,7 @@ public class BaseContainerMenu<TILE extends BlockEntity> extends AbstractContain
         slot = this.slots.get(k);
         itemstack1 = slot.getItem();
 
-        if (!itemstack1.isEmpty() && ItemStack.isSameItemSameTags(stack, itemstack1) && this.canTakeItemForPickAll(stack, slot)) {
+        if (!itemstack1.isEmpty() && ItemStack.isSameItemSameComponents(stack, itemstack1) && this.canTakeItemForPickAll(stack, slot)) {
           int l = itemstack1.getCount() + stack.getCount();
           int limit = Math.min(stack.getMaxStackSize(), slot.getMaxStackSize(stack));
 
@@ -311,7 +311,7 @@ public class BaseContainerMenu<TILE extends BlockEntity> extends AbstractContain
   }
 
   /**
-   * Gets a tile entity from a packet buffer for the client menu.
+   * Gets a tile entity from a packet buffer
    * @param buf     Packet buffer instance
    * @param type    Tile entity class
    * @param <TILE>  Tile entity type
@@ -322,28 +322,6 @@ public class BaseContainerMenu<TILE extends BlockEntity> extends AbstractContain
     if (buf == null) {
       return null;
     }
-    // must have a level, this will fail on the server
-    Level level = SafeClientAccess.getLevel();
-    if (level == null) {
-      return null;
-    }
-    // world must be loaded there
-    BlockPos pos = buf.readBlockPos();
-    if (!BlockEntityHelper.isBlockLoaded(level, pos)) {
-      Mantle.logger.error("Menu attempted to load BlockEntity of type {} from unloaded position {}.", type, pos);
-      return null;
-    }
-    // block entity must exist
-    BlockEntity be = level.getBlockEntity(pos);
-    if (be == null) {
-      Mantle.logger.error("Menu failed to find BlockEntity of type {} at {}.", type, pos);
-      return null;
-    }
-    // block entity must be the right type
-    if (type.isInstance(be)) {
-      return type.cast(be);
-    }
-    Mantle.logger.error("Menu found unexpected BlockEntity class at {}: expected {}, but found: {}", pos, type, be.getClass());
-    return null;
+    return FMLEnvironment.dist == Dist.CLIENT ? BlockEntityHelper.get(type, Minecraft.getInstance().level, buf.readBlockPos()).orElse(null) : null;
   }
 }

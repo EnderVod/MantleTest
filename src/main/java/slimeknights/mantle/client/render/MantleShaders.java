@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.config.Config;
 
@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 
 /** Handles any custom shaders registered by Mantle. */
-@Mod.EventBusSubscriber(modid = Mantle.modId, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Mantle.modId, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public class MantleShaders {
   @Nullable
   @Getter
@@ -27,10 +27,7 @@ public class MantleShaders {
   /** Gets the shader to use for {@link MantleRenderTypes#FLUID_SHADER}, checking the config option to select which shader to use. */
   @Nullable
   public static ShaderInstance getConfiguredFluidShader() {
-    if (Config.ENABLE_FLUID_FOG_FIX.get()) {
-      return fluidShader;
-    }
-    return Config.FLUID_USE_TEXT_SHADER.get() ? GameRenderer.getRendertypeTextShader() : GameRenderer.getPositionColorTexLightmapShader();
+    return Config.ENABLE_FLUID_FOG_FIX.get() ? fluidShader : GameRenderer.getPositionColorTexLightmapShader();
   }
 
   @SubscribeEvent

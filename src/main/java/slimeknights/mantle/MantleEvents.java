@@ -1,7 +1,8 @@
 package slimeknights.mantle;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -9,16 +10,17 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.GameRules;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.EventBusSubscriber.Bus;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.EventBusSubscriber.Bus;
 import slimeknights.mantle.datagen.MantleTags;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -29,40 +31,10 @@ import java.util.List;
 public class MantleEvents {
   /* Soulbound */
   /**
-   * Custom data key for items to preserve their slot in soulbound. Applied to items tagged {@link MantleTags.Items#SOULBOUND}.
-   * May be used by dependency mods in {@link LivingDeathEvent} to make items soulbound for other reasons.
+   * NBT key for items to preserve their slot in soulbound. Applied to items tagged {@link MantleTags.Items#SOULBOUND}.
+   * May be used by dependencies mods in {@link LivingDeathEvent} to make items soulbound for other reasons.
    */
   public static final String SOULBOUND_SLOT = "mantle_soulbound";
-
-  /** Stores the soulbound slot using the vanilla custom-data component. */
-  private static void setSoulboundSlot(ItemStack stack, int slot) {
-    CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putInt(SOULBOUND_SLOT, slot));
-  }
-
-  /** Gets the stored soulbound slot, or {@code -1} if none is present. */
-  private static int getSoulboundSlot(ItemStack stack) {
-    CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-    if (data != null && data.contains(SOULBOUND_SLOT)) {
-      return data.copyTag().getInt(SOULBOUND_SLOT);
-    }
-    return -1;
-  }
-
-  /** Removes just Mantle's soulbound marker, preserving any other custom data on the stack. */
-  private static void clearSoulboundSlot(ItemStack stack) {
-    CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-    if (data == null || !data.contains(SOULBOUND_SLOT)) {
-      return;
-    }
-
-    CompoundTag tag = data.copyTag();
-    tag.remove(SOULBOUND_SLOT);
-    if (tag.isEmpty()) {
-      stack.remove(DataComponents.CUSTOM_DATA);
-    } else {
-      stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
-    }
-  }
 
   /** Called when the player dies to store the slot to return items into */
   @SubscribeEvent
@@ -77,7 +49,8 @@ public class MantleEvents {
       for (int i = 0; i < totalSize; i++) {
         ItemStack stack = inventory.getItem(i);
         if (!stack.isEmpty() && stack.is(MantleTags.Items.SOULBOUND)) {
-          setSoulboundSlot(stack, i);
+          int slot = i;
+          CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putInt(SOULBOUND_SLOT, slot));
         }
       }
     }
@@ -96,9 +69,10 @@ public class MantleEvents {
       while (iter.hasNext()) {
         ItemEntity itemEntity = iter.next();
         ItemStack stack = itemEntity.getItem();
-        // find items with our soulbound marker and move them back into the inventory; marker stays until player clone
-        int slot = getSoulboundSlot(stack);
-        if (slot >= 0 && slot < inventory.getContainerSize()) {
+        // find items with our soulbound tag set and move them back into the inventory, will move them over later
+        CompoundTag tag = getCustomData(stack);
+        if (tag != null && tag.contains(SOULBOUND_SLOT, Tag.TAG_ANY_NUMERIC)) {
+          int slot = tag.getInt(SOULBOUND_SLOT);
           // return the tool to its requested slot if possible, remove from the drops
           if (inventory.getItem(slot).isEmpty()) {
             inventory.setItem(slot, stack);
@@ -108,7 +82,7 @@ public class MantleEvents {
             takenSlot.add(itemEntity);
           }
           iter.remove();
-          // don't clear the marker yet, we need it one last time for player clone
+          // don't clear the tag yet, we need it one last time for player clone
         }
       }
       // handle items that did not get their requested slot last, to ensure they don't take someone else's slot while being added to a default
@@ -117,8 +91,8 @@ public class MantleEvents {
         if (!inventory.add(stack)) {
           // last resort, somehow we just cannot put the stack anywhere, so drop it on the ground
           // this should never happen, but better to be safe
-          // ditch the soulbound slot marker, to prevent item stacking issues
-          clearSoulboundSlot(stack);
+          // ditch the soulbound slot tag, to prevent item stacking issues
+          removeSoulboundSlot(stack);
           drops.add(itemEntity);
         }
       }
@@ -128,6 +102,7 @@ public class MantleEvents {
   /** Called when the new player is created to fetch the soulbound item from the old */
   @SubscribeEvent(priority = EventPriority.HIGH)
   static void onPlayerClone(PlayerEvent.Clone event) {
+    // TODO: same as above, lots of duplicated code with tinkers, move to Mantle
     if (!event.isWasDeath()) {
       return;
     }
@@ -137,21 +112,24 @@ public class MantleEvents {
     if (clone.level().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY) || original.isSpectator()) {
       return;
     }
-    // find items with the soulbound marker set and move them over
+    // find items with the soulbound tag set and move them over
     Inventory originalInv = original.getInventory();
     Inventory cloneInv = clone.getInventory();
     int size = Math.min(originalInv.getContainerSize(), cloneInv.getContainerSize()); // not needed probably, but might as well be safe
     List<ItemStack> takenSlot = new ArrayList<>();
-    for (int i = 0; i < size; i++) {
+    for(int i = 0; i < size; i++) {
       ItemStack stack = originalInv.getItem(i);
-      if (!stack.isEmpty() && getSoulboundSlot(stack) >= 0) {
-        if (cloneInv.getItem(i).isEmpty()) {
-          cloneInv.setItem(i, stack);
-        } else {
-          takenSlot.add(stack);
+      if (!stack.isEmpty()) {
+        CompoundTag tag = getCustomData(stack);
+        if (tag != null && tag.contains(SOULBOUND_SLOT, Tag.TAG_ANY_NUMERIC)) {
+          if (cloneInv.getItem(i).isEmpty()) {
+            cloneInv.setItem(i, stack);
+          } else {
+            takenSlot.add(stack);
+          }
+          // remove the slot tag, clear the tag if needed
+          removeSoulboundSlot(stack);
         }
-        // remove the slot marker after the clone has received the stack
-        clearSoulboundSlot(stack);
       }
     }
 
@@ -162,6 +140,20 @@ public class MantleEvents {
         // this should never happen, but better to be safe
         clone.drop(stack, false);
       }
+    }
+  }
+
+  @Nullable
+  private static CompoundTag getCustomData(ItemStack stack) {
+    CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+    return customData == null ? null : customData.copyTag();
+  }
+
+  private static void removeSoulboundSlot(ItemStack stack) {
+    CompoundTag tag = getCustomData(stack);
+    if (tag != null) {
+      tag.remove(SOULBOUND_SLOT);
+      CustomData.set(DataComponents.CUSTOM_DATA, stack, tag);
     }
   }
 }
