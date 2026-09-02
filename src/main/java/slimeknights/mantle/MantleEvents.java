@@ -1,12 +1,13 @@
 package slimeknights.mantle;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.GameRules;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -28,10 +29,40 @@ import java.util.List;
 public class MantleEvents {
   /* Soulbound */
   /**
-   * NBT key for items to preserve their slot in soulbound. Applied to items tagged {@link MantleTags.Items#SOULBOUND}.
-   * May be used by dependencies mods in {@link LivingDeathEvent} to make items soulbound for other reasons.
+   * Custom data key for items to preserve their slot in soulbound. Applied to items tagged {@link MantleTags.Items#SOULBOUND}.
+   * May be used by dependency mods in {@link LivingDeathEvent} to make items soulbound for other reasons.
    */
   public static final String SOULBOUND_SLOT = "mantle_soulbound";
+
+  /** Stores the soulbound slot using the vanilla custom-data component. */
+  private static void setSoulboundSlot(ItemStack stack, int slot) {
+    CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putInt(SOULBOUND_SLOT, slot));
+  }
+
+  /** Gets the stored soulbound slot, or {@code -1} if none is present. */
+  private static int getSoulboundSlot(ItemStack stack) {
+    CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+    if (data != null && data.contains(SOULBOUND_SLOT)) {
+      return data.copyTag().getInt(SOULBOUND_SLOT);
+    }
+    return -1;
+  }
+
+  /** Removes just Mantle's soulbound marker, preserving any other custom data on the stack. */
+  private static void clearSoulboundSlot(ItemStack stack) {
+    CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+    if (data == null || !data.contains(SOULBOUND_SLOT)) {
+      return;
+    }
+
+    CompoundTag tag = data.copyTag();
+    tag.remove(SOULBOUND_SLOT);
+    if (tag.isEmpty()) {
+      stack.remove(DataComponents.CUSTOM_DATA);
+    } else {
+      stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+  }
 
   /** Called when the player dies to store the slot to return items into */
   @SubscribeEvent
@@ -46,7 +77,7 @@ public class MantleEvents {
       for (int i = 0; i < totalSize; i++) {
         ItemStack stack = inventory.getItem(i);
         if (!stack.isEmpty() && stack.is(MantleTags.Items.SOULBOUND)) {
-          stack.getOrCreateTag().putInt(SOULBOUND_SLOT, i);
+          setSoulboundSlot(stack, i);
         }
       }
     }
@@ -65,10 +96,9 @@ public class MantleEvents {
       while (iter.hasNext()) {
         ItemEntity itemEntity = iter.next();
         ItemStack stack = itemEntity.getItem();
-        // find items with our soulbound tag set and move them back into the inventory, will move them over later
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains(SOULBOUND_SLOT, Tag.TAG_ANY_NUMERIC)) {
-          int slot = tag.getInt(SOULBOUND_SLOT);
+        // find items with our soulbound marker and move them back into the inventory; marker stays until player clone
+        int slot = getSoulboundSlot(stack);
+        if (slot >= 0 && slot < inventory.getContainerSize()) {
           // return the tool to its requested slot if possible, remove from the drops
           if (inventory.getItem(slot).isEmpty()) {
             inventory.setItem(slot, stack);
@@ -78,7 +108,7 @@ public class MantleEvents {
             takenSlot.add(itemEntity);
           }
           iter.remove();
-          // don't clear the tag yet, we need it one last time for player clone
+          // don't clear the marker yet, we need it one last time for player clone
         }
       }
       // handle items that did not get their requested slot last, to ensure they don't take someone else's slot while being added to a default
@@ -87,14 +117,8 @@ public class MantleEvents {
         if (!inventory.add(stack)) {
           // last resort, somehow we just cannot put the stack anywhere, so drop it on the ground
           // this should never happen, but better to be safe
-          // ditch the soulbound slot tag, to prevent item stacking issues
-          CompoundTag tag = stack.getTag();
-          if (tag != null) {
-            tag.remove(SOULBOUND_SLOT);
-            if (tag.isEmpty()) {
-              stack.setTag(null);
-            }
-          }
+          // ditch the soulbound slot marker, to prevent item stacking issues
+          clearSoulboundSlot(stack);
           drops.add(itemEntity);
         }
       }
@@ -113,27 +137,21 @@ public class MantleEvents {
     if (clone.level().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY) || original.isSpectator()) {
       return;
     }
-    // find items with the soulbound tag set and move them over
+    // find items with the soulbound marker set and move them over
     Inventory originalInv = original.getInventory();
     Inventory cloneInv = clone.getInventory();
     int size = Math.min(originalInv.getContainerSize(), cloneInv.getContainerSize()); // not needed probably, but might as well be safe
     List<ItemStack> takenSlot = new ArrayList<>();
-    for(int i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++) {
       ItemStack stack = originalInv.getItem(i);
-      if (!stack.isEmpty()) {
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains(SOULBOUND_SLOT, Tag.TAG_ANY_NUMERIC)) {
-          if (cloneInv.getItem(i).isEmpty()) {
-            cloneInv.setItem(i, stack);
-          } else {
-            takenSlot.add(stack);
-          }
-          // remove the slot tag, clear the tag if needed
-          tag.remove(SOULBOUND_SLOT);
-          if (tag.isEmpty()) {
-            stack.setTag(null);
-          }
+      if (!stack.isEmpty() && getSoulboundSlot(stack) >= 0) {
+        if (cloneInv.getItem(i).isEmpty()) {
+          cloneInv.setItem(i, stack);
+        } else {
+          takenSlot.add(stack);
         }
+        // remove the slot marker after the clone has received the stack
+        clearSoulboundSlot(stack);
       }
     }
 
