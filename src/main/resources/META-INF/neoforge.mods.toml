@@ -1,0 +1,32 @@
+modLoader="javafml"
+loaderVersion="${loader_range}"
+issueTrackerURL="https://github.com/SlimeKnights/Mantle/issues"
+logoFile="Mantle.png"
+license="MIT"
+
+[[mods]]
+    modId="mantle"
+    version="${version}"
+    displayName="Mantle"
+    authors="Slime Knights"
+    description='''
+Shared code for Slime Knights mods and others.
+    '''
+    displayURL="https://www.curseforge.com/minecraft/mc-mods/mantle"
+
+[[dependencies.mantle]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.mantle]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[accessTransformers]]
+    file="META-INF/accesstransformer.cfg"
