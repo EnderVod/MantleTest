@@ -1,0 +1,90 @@
+name: Hilt reference translation experiment
+
+on:
+  push:
+    branches:
+      - 1.21.1-hilt-reference
+    paths:
+      - .github/workflows/hilt-reference-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  translate-and-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Mantle experiment
+        uses: actions/checkout@v4
+        with:
+          ref: 1.21.1-hilt-reference
+          fetch-depth: 0
+
+      - name: Fetch Hilt 1.21.1 reference
+        run: git clone --depth 1 --branch 'Neo/1.21.1' https://github.com/Modern-Mods/Hilt.git /tmp/hilt
+
+      - name: Translate Hilt source back to Mantle API names
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+
+          source = Path('/tmp/hilt/src/main/java/modernmods/hilt')
+          target = Path('src/main/java/slimeknights/mantle')
+          if target.exists():
+              shutil.rmtree(target)
+          target.mkdir(parents=True, exist_ok=True)
+
+          copied = 0
+          for src in source.rglob('*.java'):
+              rel = src.relative_to(source)
+              rel_parts = [part.replace('Hilt', 'Mantle') for part in rel.parts]
+              dst = target.joinpath(*rel_parts)
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              text = src.read_text(encoding='utf-8')
+              text = text.replace('modernmods.hilt', 'slimeknights.mantle')
+              text = text.replace('HILT', 'MANTLE')
+              text = text.replace('Hilt', 'Mantle')
+              text = text.replace('hilt', 'mantle')
+              dst.write_text(text, encoding='utf-8')
+              copied += 1
+
+          # Use the already-ported access transformer rules as well.
+          hilt_at = Path('/tmp/hilt/src/main/resources/META-INF/accesstransformer.cfg')
+          mantle_at = Path('src/main/resources/META-INF/accesstransformer.cfg')
+          if hilt_at.is_file():
+              mantle_at.parent.mkdir(parents=True, exist_ok=True)
+              mantle_at.write_text(hilt_at.read_text(encoding='utf-8'), encoding='utf-8')
+
+          Path('HILT_REFERENCE_SYNC.txt').write_text(
+              f'Translated {copied} Hilt Java files from Modern-Mods/Hilt Neo/1.21.1.\n'
+              'This branch is an experiment only; the main 1.21.1-neoforge branch remains independent.\n',
+              encoding='utf-8')
+          print(f'Translated {copied} Java files')
+          PY
+
+      - name: Commit translated reference tree
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main/java src/main/resources/META-INF/accesstransformer.cfg HILT_REFERENCE_SYNC.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Experiment: translate Hilt 1.21.1 source to Mantle names"
+            git push origin HEAD:1.21.1-hilt-reference
+          fi
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Compile translated tree
+        run: ./gradlew compileJava --stacktrace --no-daemon
