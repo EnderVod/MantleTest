@@ -301,7 +301,9 @@ public class MultiModuleScreen<CONTAINER extends MultiModuleContainerMenu<?>> ex
   @Nullable
   protected ModuleScreen<?,?> getModuleForPoint(double x, double y) {
     for (ModuleScreen<?,?> module : this.modules) {
-      if (this.isHovering(module.getGuiLeft(), module.getGuiTop(), module.imageWidth, module.imageHeight, x + this.cornerX, y + this.cornerY)) {
+      int moduleWidth = module.guiRight() - module.getGuiLeft();
+      int moduleHeight = module.guiBottom() - module.getGuiTop();
+      if (this.isHovering(module.getGuiLeft(), module.getGuiTop(), moduleWidth, moduleHeight, x + this.cornerX, y + this.cornerY)) {
         return module;
       }
     }
