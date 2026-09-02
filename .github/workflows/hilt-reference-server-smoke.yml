@@ -22,7 +22,7 @@ jobs:
           ref: 1.21.1-hilt-reference
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -31,10 +31,11 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Accept development server EULA
+      - name: Prepare development server
         run: |
           mkdir -p run/server
           echo 'eula=true' > run/server/eula.txt
+          touch run/server/server.properties
 
       - name: Boot dedicated server
         shell: bash
