@@ -1,0 +1,35 @@
+name: Hilt-translated Mantle full build
+
+on:
+  push:
+    branches:
+      - 1.21.1-hilt-reference
+    paths:
+      - .github/workflows/hilt-reference-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout translated branch
+        uses: actions/checkout@v4
+        with:
+          ref: 1.21.1-hilt-reference
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Full build
+        run: ./gradlew build --stacktrace --no-daemon
