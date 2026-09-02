@@ -1,0 +1,57 @@
+name: Hilt-translated Mantle server smoke test
+
+on:
+  push:
+    branches:
+      - 1.21.1-hilt-reference
+    paths:
+      - .github/workflows/hilt-reference-server-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout translated branch
+        uses: actions/checkout@v4
+        with:
+          ref: 1.21.1-hilt-reference
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Accept development server EULA
+        run: |
+          mkdir -p run/server
+          echo 'eula=true' > run/server/eula.txt
+
+      - name: Boot dedicated server
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=INT 240s ./gradlew runServer --no-daemon > server-console.log 2>&1
+          status=$?
+          set -e
+
+          if grep -Eq 'Done \([0-9.]+s\)!|Done \(' run/server/logs/latest.log server-console.log 2>/dev/null; then
+            echo 'Dedicated server reached the ready state successfully.'
+            exit 0
+          fi
+
+          echo "Server did not reach ready state (command status: $status)."
+          echo '--- server console tail ---'
+          tail -n 250 server-console.log || true
+          echo '--- latest.log tail ---'
+          tail -n 250 run/server/logs/latest.log || true
+          exit 1
