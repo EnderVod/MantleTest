@@ -147,9 +147,9 @@ public abstract class AbstractRecipeBuilder<T extends AbstractRecipeBuilder<T>> 
   /** Finished recipe using a loadable */
   protected class LoadableFinishedRecipe<R extends Recipe<?>> extends AbstractFinishedRecipe {
     private final R recipe;
-    private final RecordLoadable<R> loadable;
+    private final RecordLoadable<? super R> loadable;
 
-    public LoadableFinishedRecipe(ResourceLocation id, R recipe, RecordLoadable<R> loadable, @Nullable ResourceLocation advancementId) {
+    public LoadableFinishedRecipe(ResourceLocation id, R recipe, RecordLoadable<? super R> loadable, @Nullable ResourceLocation advancementId) {
       super(id, advancementId);
       this.recipe = recipe;
       this.loadable = loadable;
