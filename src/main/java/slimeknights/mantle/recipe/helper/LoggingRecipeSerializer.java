@@ -25,15 +25,28 @@ public interface LoggingRecipeSerializer<T extends Recipe<?>> extends RecipeSeri
   LegacySerializer<ShapedRecipe> SHAPED_RECIPE = new LegacySerializer<>(RecipeSerializer.SHAPED_RECIPE);
   LegacySerializer<ShapelessRecipe> SHAPELESS_RECIPE = new LegacySerializer<>(RecipeSerializer.SHAPELESS_RECIPE);
 
-  T fromJson(ResourceLocation recipeId, JsonObject json);
+  /** Legacy JSON entry point retained while serializers migrate to codecs. */
+  default T fromJson(ResourceLocation recipeId, JsonObject json) {
+    return codec().codec().parse(JsonOps.INSTANCE, json).getOrThrow(IllegalArgumentException::new);
+  }
+
+  /** 1.21 registry-aware network entry point for codec-native serializers. */
+  default T fromNetworkSafe(RegistryFriendlyByteBuf buffer) {
+    throw new UnsupportedOperationException("Serializer must implement a registry-aware or legacy network decoder");
+  }
 
   @Nullable
   default T fromNetworkSafe(ResourceLocation recipeId, FriendlyByteBuf buffer) {
-    return streamCodec().decode((RegistryFriendlyByteBuf)buffer);
+    return fromNetworkSafe((RegistryFriendlyByteBuf)buffer);
+  }
+
+  /** 1.21 registry-aware network entry point for codec-native serializers. */
+  default void toNetworkSafe(RegistryFriendlyByteBuf buffer, T recipe) {
+    throw new UnsupportedOperationException("Serializer must implement a registry-aware or legacy network encoder");
   }
 
   default void toNetworkSafe(FriendlyByteBuf buffer, T recipe) {
-    streamCodec().encode((RegistryFriendlyByteBuf)buffer, recipe);
+    toNetworkSafe((RegistryFriendlyByteBuf)buffer, recipe);
   }
 
   @Override
