@@ -12,18 +12,21 @@ license="MIT"
     description='''
 Shared code for Slime Knights mods and others.
     '''
-    displayURL="https://minecraft.curseforge.com/projects/mantle"
+    displayURL="https://www.curseforge.com/minecraft/mc-mods/mantle"
 
 [[dependencies.mantle]]
-    modId="forge"
-    mandatory=true
-    versionRange="${forge_range}"
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.mantle]]
     modId="minecraft"
-    mandatory=true
+    type="required"
     versionRange="${minecraft_range}"
     ordering="NONE"
     side="BOTH"
+
+[[accessTransformers]]
+    file="META-INF/accesstransformer.cfg"

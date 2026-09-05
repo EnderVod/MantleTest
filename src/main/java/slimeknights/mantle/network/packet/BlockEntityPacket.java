@@ -3,7 +3,7 @@ package slimeknights.mantle.network.packet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent.Context;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.client.SafeClientAccess;
 import slimeknights.mantle.util.BlockEntityHelper;
@@ -22,7 +22,7 @@ public interface BlockEntityPacket<T> extends IThreadsafePacket {
   Class<T> type();
 
   @Override
-  default void handleThreadsafe(Context context) {
+  default void handleThreadsafe(IPayloadContext context) {
     BlockPos pos = pos();
     BlockEntity be = getBlockEntity(pos, this);
     if (be != null) {
@@ -37,11 +37,8 @@ public interface BlockEntityPacket<T> extends IThreadsafePacket {
     }
   }
 
-  /** Handles the block entity, assuming it's not null and the correct type */
-  void handleBlockEntity(Context context, T be);
-
-
-  /* Helpers */
+  /** Handles the block entity, assuming it's not null and the correct type. */
+  void handleBlockEntity(IPayloadContext context, T be);
 
   /**
    * Gets a block entity in a packet, ensuring the world is loaded before attempting.
@@ -49,7 +46,7 @@ public interface BlockEntityPacket<T> extends IThreadsafePacket {
    * @param pos     Position
    * @param packet  Object to print for debug
    * @return Block entity instance. Null if: world null, position not loaded, or block entity does not exist.
-   * @see BlockEntityHelper#getLoaded(BlockGetter, BlockPos)
+   * @see BlockEntityHelper#isBlockLoaded(BlockGetter, BlockPos)
    */
   @Nullable
   static BlockEntity getBlockEntity(@Nullable BlockGetter world, BlockPos pos, Object packet) {
@@ -61,7 +58,7 @@ public interface BlockEntityPacket<T> extends IThreadsafePacket {
   }
 
   /**
-   * Gets a block entity in a packet client side, ensuring the world is loaded before attempting. Only works on the client side.
+   * Gets a block entity client side, ensuring the world is loaded before attempting.
    * @param pos     Position
    * @param packet  Object to print for debug
    * @return Block entity instance. Null if: not client, position not loaded, or block entity does not exist.

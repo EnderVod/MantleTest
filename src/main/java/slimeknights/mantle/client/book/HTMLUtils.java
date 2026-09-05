@@ -139,32 +139,17 @@ public class HTMLUtils {
     return group;
   }
 
-  /**
-   * Merges Strings into an unordered list
-   *
-   * @param lines Strings, can use Minecraft chat formatting
-   * @return li tags
-   */
+  /** Converts formatted strings into HTML list item elements. */
   public static Stream<HtmlSerializable> toListItems(String[] lines) {
     return toListItems(Arrays.stream(lines).map(HTMLUtils::parse));
   }
 
-  /**
-   * Merges Components into an unordered list
-   *
-   * @param lines Components
-   * @return li tags
-   */
+  /** Converts components into HTML list item elements. */
   public static Stream<HtmlSerializable> toListItems(List<Component> lines) {
     return toListItems(lines.stream().map(HTMLUtils::toHtml));
   }
 
-  /**
-   * Merges a Stream of HtmlSerializable into an unordered list
-   *
-   * @param lines HtmlSerializables
-   * @return li tags
-   */
+  /** Wraps HTML values in list item and paragraph elements. */
   public static Stream<HtmlSerializable> toListItems(Stream<HtmlSerializable> lines) {
     return lines.map(line -> HtmlElement.li().add(HtmlElement.p().add(line)));
   }

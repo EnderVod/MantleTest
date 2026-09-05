@@ -2,7 +2,6 @@ package slimeknights.mantle.client.book.data.element;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import slimeknights.mantle.client.book.HTMLUtils;
 import slimeknights.mantle.client.book.IHTML;
@@ -22,7 +21,7 @@ public class TextData implements IHTML {
   /** @deprecated use {@link #linebreak} */
   @Deprecated(forRemoval = true)
   public static final TextData LINEBREAK = new TextData().linebreak(true);
-  private static final Pattern LIST_REGEX = Pattern.compile("^\n?(•|\\d+\\.)[ \u00a0]");
+  private static final Pattern LIST_REGEX = Pattern.compile("^\n?•[ \u00a0]");
   /** Constant to use in mods wishing to implement bulleted lists that are compatible with the book lists. Will also need to use {@link #linebreak(boolean)} */
   public static final String LIST_PREFIX = "•\u00a0";
 
@@ -76,7 +75,7 @@ public class TextData implements IHTML {
     }
 
     // apply styles
-    boolean hasColor = (rgbColor & 0xFFFFFF) != 0 || !color.isEmpty();
+    boolean hasColor = (rgbColor & 0xFFFFFF) != 0;
     if (hasColor || bold || italic || strikethrough || underlined || dropshadow) {
       if (element == null) {
         // create new element for the style if no link or list item
@@ -88,10 +87,7 @@ public class TextData implements IHTML {
       // apply styles to the found element
       if (underlined) element.classes("underline");
       if (dropshadow) element.classes("shadow");
-      if (hasColor) {
-        ChatFormatting formatting = ChatFormatting.getByName(color);
-        element.color(formatting != null ? formatting.getColor() : rgbColor);
-      }
+      if (hasColor) element.color(rgbColor);
       if (bold) element.style("font-weight", "bold");
       if (italic) element.style("font-style", "italic");
       if (strikethrough) element.style("text-decoration", "line-through");
@@ -111,20 +107,20 @@ public class TextData implements IHTML {
   }
 
   /**
-   * Merges TextData[] into a single tag when possible.
-   * Formats any lists prefixed with numbers or bullet points.
+   * Merges TextData[] into a single tag when possible
+   * Formats any lists with ul tags
    *
    * @param array TextData[] to convert
    * @param book parent BookData
    * @return HTML p and ul tags
    */
-  public static HtmlSerializable toHtml(@Nullable TextData[] array, BookData book) {
+  public static HtmlGroup toHtml(@Nullable TextData[] array, BookData book) {
     HtmlGroup group = HtmlGroup.indent();
     if (array == null) return group;
 
     boolean prevBreak = false;
     @Nullable
-    HtmlElement list = null;
+    HtmlElement ul = null;
     @Nullable
     HtmlElement p = null;
 
@@ -132,37 +128,42 @@ public class TextData implements IHTML {
       String text = data.getText();
       Matcher match = LIST_REGEX.matcher(text);
       if (match.find()) {
-        if (list == null) {
-          list = match.group(1).equals("•") ? HtmlElement.ul().classes("prop-list") : HtmlElement.ol().classes("prop-list");
-          group.add(list);
-        }
         if (p != null) {
           p = null;
         }
+        if (ul == null) {
+          ul = HtmlElement.ul().classes("prop-list");
+          group.add(ul);
+        }
+
         // removes the bullet point character
-        list.add(HtmlElement.li().add(HtmlElement.p().add(
+        ul.add(HtmlElement.li().add(HtmlElement.p().add(
           data.toHTML(book, match.replaceFirst("")))
         ));
       } else {
-        if (list != null) {
+        if (ul != null) {
           // merges <li> separated by \n
-          if (text.equals("\n")) continue;
-          list = null;
+          if (data.getText().equals("\n")) continue;
+          ul = null;
         }
         if (p != null) {
           if (data.paragraph) {
             // add an extra p as an extra line
-            if (prevBreak) group.add(HtmlElement.p());
+            if (prevBreak)  group.add(HtmlElement.p());
             p = HtmlElement.p();
             group.add(p);
           }
-          prevBreak = data.linebreak || text.charAt(text.length() - 1) == '\n';
-          if (prevBreak) p.add(HtmlElement.br());
+          if (data.linebreak || data.getText().charAt(data.getText().length() - 1) == '\n') {
+            p.add(HtmlElement.br());
+            prevBreak = true;
+          } else {
+            prevBreak = false;
+          }
         } else {
           p = HtmlElement.p();
           group.add(p);
         }
-        p.add(data.toHTML(book, text));
+        p.add(data.toHTML(book, data.getText()));
       }
     }
     return group;
