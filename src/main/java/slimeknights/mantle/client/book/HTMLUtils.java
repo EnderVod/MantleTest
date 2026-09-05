@@ -11,6 +11,8 @@ import slimeknights.mantle.util.html.HtmlSerializable;
 import slimeknights.mantle.util.html.HtmlString;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Helpers for converting to HTML.
@@ -135,5 +137,20 @@ public class HTMLUtils {
     group.add(component.getSiblings().stream().map(HTMLUtils::toHtml));
 
     return group;
+  }
+
+  /** Converts formatted strings into HTML list item elements. */
+  public static Stream<HtmlSerializable> toListItems(String[] lines) {
+    return toListItems(Arrays.stream(lines).map(HTMLUtils::parse));
+  }
+
+  /** Converts components into HTML list item elements. */
+  public static Stream<HtmlSerializable> toListItems(List<Component> lines) {
+    return toListItems(lines.stream().map(HTMLUtils::toHtml));
+  }
+
+  /** Wraps HTML values in list item and paragraph elements. */
+  public static Stream<HtmlSerializable> toListItems(Stream<HtmlSerializable> lines) {
+    return lines.map(line -> HtmlElement.li().add(HtmlElement.p().add(line)));
   }
 }
