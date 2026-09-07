@@ -29,6 +29,8 @@ import java.util.function.Supplier;
  * @param <T>  Recipe type
  */
 public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRecipeSerializer<T> {
+  /** JSON field carrying the legacy recipe ID through Minecraft 1.21's codec-only recipe loader. */
+  public static final String JSON_RECIPE_ID = "mantle_id";
   /** Context key to use if you want the recipe serializer passed into your recipe */
   public static final ContextKey<RecipeSerializer<?>> SERIALIZER = new ContextKey<>("serializer");
   /** Context key to use if you want a type aware serializer in the recipe, requires {@link #of(RecordLoadable, Supplier)} for your serializer. */
@@ -46,8 +48,16 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
     this.loadable = loadable;
     this.codec = MapCodec.assumeMapUnsafe(Codec.PASSTHROUGH.xmap(dynamic -> {
       JsonObject json = dynamic.convert(JsonOps.INSTANCE).getValue().getAsJsonObject();
-      return loadable.deserialize(json, buildContext(null).build());
-    }, object -> new Dynamic<>(JsonOps.INSTANCE, loadable.serialize(object))));
+      ResourceLocation id = null;
+      if (json.has(JSON_RECIPE_ID)) {
+        id = ResourceLocation.parse(json.get(JSON_RECIPE_ID).getAsString());
+      }
+      return loadable.deserialize(json, buildContext(id).build());
+    }, object -> {
+      JsonObject json = loadable.serialize(object);
+      json.addProperty(JSON_RECIPE_ID, getRecipeId(object).toString());
+      return new Dynamic<>(JsonOps.INSTANCE, json);
+    }));
     this.streamCodec = StreamCodec.of((buffer, recipe) -> {
       buffer.writeResourceLocation(getRecipeId(recipe));
       toNetworkSafe(buffer, recipe);
