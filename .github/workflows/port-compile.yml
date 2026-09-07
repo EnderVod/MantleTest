@@ -1,6 +1,6 @@
 name: Mantle 1.21.1 Port Build
 
-# Verify 1.21 SNBT string parsing through bb3c7bc7.
+# Verify 1.21 namespaced enum-extension display contexts through afea43ef.
 on:
   push:
     branches:
