@@ -1,6 +1,6 @@
 name: Mantle 1.21.1 Port Build
 
-# Verify 1.21 namespaced enum-extension display contexts through afea43ef.
+# Verify 1.21 loadable recipe JSON and network-codec compatibility through 2b4742ce.
 on:
   push:
     branches:
@@ -34,6 +34,19 @@ jobs:
 
       - name: Build Mantle
         run: ./gradlew build --stacktrace --no-daemon
+
+      - name: Verify loadable recipe registry-aware network bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_file='src/main/java/slimeknights/mantle/recipe/helper/LoadableRecipeSerializer.java'
+          grep -Fq 'public void toNetworkSafe(RegistryFriendlyByteBuf buffer, T recipe)' "$source_file"
+          grep -Fq 'toNetworkSafe((FriendlyByteBuf)buffer, recipe);' "$source_file"
+
+          javap -classpath build/classes/java/main -p slimeknights.mantle.recipe.helper.LoadableRecipeSerializer > loadable-recipe-serializer.javap
+          grep -Fq 'public void toNetworkSafe(net.minecraft.network.RegistryFriendlyByteBuf, T);' loadable-recipe-serializer.javap
+          grep -Fq 'public void toNetworkSafe(net.minecraft.network.FriendlyByteBuf, T);' loadable-recipe-serializer.javap
+          echo 'Verified both 1.21 registry-aware and legacy recipe network encoder overloads.'
 
       - name: Upload build outputs
         if: success()
