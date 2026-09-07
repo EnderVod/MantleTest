@@ -54,7 +54,7 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
       }
       return loadable.deserialize(json, buildContext(id).build());
     }, object -> {
-      JsonObject json = loadable.serialize(object);
+      JsonObject json = loadable.serialize(object).getAsJsonObject();
       json.addProperty(JSON_RECIPE_ID, getRecipeId(object).toString());
       return new Dynamic<>(JsonOps.INSTANCE, json);
     }));
