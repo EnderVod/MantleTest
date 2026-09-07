@@ -18,7 +18,10 @@ public enum DisplayContextLoadable implements ResourceLocationLoadable<ItemDispl
   @Override
   public ItemDisplayContext fromKey(ResourceLocation name, String key, TypedMap context) {
     for (ItemDisplayContext value : ItemDisplayContext.values()) {
-      if (name.getPath().equals(value.getSerializedName())) {
+      String serializedName = value.getSerializedName();
+      // Vanilla contexts serialize as unqualified names such as "gui", while NeoForge enum
+      // extensions may use a fully namespaced serialized name such as "tconstruct:table".
+      if (name.getPath().equals(serializedName) || name.toString().equals(serializedName)) {
         return value;
       }
     }
