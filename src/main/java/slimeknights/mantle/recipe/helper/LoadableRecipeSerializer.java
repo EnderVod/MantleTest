@@ -106,6 +106,17 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
     }
   }
 
+  /**
+   * Registry-aware 1.21 stream-codec entry point. Without this overload Java selects the
+   * interface default for RegistryFriendlyByteBuf, which deliberately throws instead of
+   * reaching the legacy FriendlyByteBuf encoder below.
+   */
+  @Override
+  public void toNetworkSafe(RegistryFriendlyByteBuf buffer, T recipe) {
+    toNetworkSafe((FriendlyByteBuf)buffer, recipe);
+  }
+
+  @Override
   public void toNetworkSafe(FriendlyByteBuf buffer, T recipe) {
     try {
       loadable.encode(buffer, recipe);
