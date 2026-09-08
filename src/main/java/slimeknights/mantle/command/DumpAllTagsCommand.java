@@ -41,7 +41,7 @@ public class DumpAllTagsCommand {
 
   /** Gets the path for the output */
   protected static File getOutputFile(CommandContext<CommandSourceStack> context) {
-    return context.getSource().getServer().getFile(TAG_DUMP_PATH);
+    return context.getSource().getServer().getFile(TAG_DUMP_PATH).toFile();
   }
 
   /** @deprecated use {@link GeneratePackHelper#getOutputComponent(File)} */
@@ -65,7 +65,7 @@ public class DumpAllTagsCommand {
     TagSource<?> registry = TagSourceArgument.get(context);
     int result = runForFolder(context, registry, output);
     // print result
-    context.getSource().sendSuccess(() -> Component.translatable("command.mantle.dump_all_tags.type_success", registry.key().location(), GeneratePackHelper.getOutputComponent(output)), true);
+    context.getSource().sendSuccess(() -> Component.translatable("command.mantle.dump_all_tags.type_success", registry.key().location().toString(), GeneratePackHelper.getOutputComponent(output)), true);
     return result;
   }
 

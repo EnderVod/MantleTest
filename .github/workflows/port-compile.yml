@@ -1,0 +1,57 @@
+name: Mantle 1.21.1 Port Build
+
+# Verify 1.21 loadable recipe JSON and network-codec compatibility through 2b4742ce.
+on:
+  push:
+    branches:
+      - 1.21.1-neoforge
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mantle-port-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Build Mantle
+        run: ./gradlew build --stacktrace --no-daemon
+
+      - name: Verify loadable recipe registry-aware network bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_file='src/main/java/slimeknights/mantle/recipe/helper/LoadableRecipeSerializer.java'
+          grep -Fq 'public void toNetworkSafe(RegistryFriendlyByteBuf buffer, T recipe)' "$source_file"
+          grep -Fq 'toNetworkSafe((FriendlyByteBuf)buffer, recipe);' "$source_file"
+
+          javap -classpath build/classes/java/main -p slimeknights.mantle.recipe.helper.LoadableRecipeSerializer > loadable-recipe-serializer.javap
+          grep -Fq 'public void toNetworkSafe(net.minecraft.network.RegistryFriendlyByteBuf, T);' loadable-recipe-serializer.javap
+          grep -Fq 'public void toNetworkSafe(net.minecraft.network.FriendlyByteBuf, T);' loadable-recipe-serializer.javap
+          echo 'Verified both 1.21 registry-aware and legacy recipe network encoder overloads.'
+
+      - name: Upload build outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mantle-1.21.1-neoforge
+          path: build/libs/*.jar
+          if-no-files-found: error

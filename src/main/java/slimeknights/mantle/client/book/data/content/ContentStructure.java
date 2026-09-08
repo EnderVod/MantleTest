@@ -4,6 +4,7 @@ import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -20,10 +21,9 @@ import slimeknights.mantle.client.screen.book.element.BookElement;
 import slimeknights.mantle.client.screen.book.element.StructureElement;
 import slimeknights.mantle.client.screen.book.element.TextElement;
 import slimeknights.mantle.util.html.HtmlElement;
-import slimeknights.mantle.util.html.HtmlGroup;
-import slimeknights.mantle.util.html.HtmlSerializable;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,14 +56,14 @@ public class ContentStructure extends PageContent {
     }
 
     try {
-      CompoundTag compoundnbt = NbtIo.readCompressed(resource.open());
+      CompoundTag compoundnbt = NbtIo.readCompressed(resource.open(), NbtAccounter.unlimitedHeap());
       this.template.load(BuiltInRegistries.BLOCK.asLookup(), compoundnbt);
     } catch (IOException e) {
       e.printStackTrace();
       return;
     }
 
-    this.templateBlocks = this.template.palettes.get(0).blocks();
+    this.templateBlocks = getTemplateBlocks(this.template);
 
     for (int i = 0; i < this.templateBlocks.size(); i++) {
       StructureTemplate.StructureBlockInfo info = this.templateBlocks.get(i);
@@ -73,6 +73,19 @@ public class ContentStructure extends PageContent {
       } else if (info.state().isAir())
         // Usually means it contains a block that has been renamed
         Mantle.logger.error("Found non-default air block in template " + this.data);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<StructureTemplate.StructureBlockInfo> getTemplateBlocks(StructureTemplate template) {
+    try {
+      Field palettesField = StructureTemplate.class.getDeclaredField("palettes");
+      palettesField.setAccessible(true);
+      List<StructureTemplate.Palette> palettes = (List<StructureTemplate.Palette>)palettesField.get(template);
+      return palettes.isEmpty() ? new ArrayList<>() : new ArrayList<>(palettes.get(0).blocks());
+    } catch (ReflectiveOperationException e) {
+      Mantle.logger.error("Failed to read structure template palette", e);
+      return new ArrayList<>();
     }
   }
 
@@ -115,10 +128,7 @@ public class ContentStructure extends PageContent {
   }
 
   @Override
-  public HtmlSerializable toHTML(BookData book) {
-    return HtmlGroup.indent().add(
-      makeTitleHTML(),
-      HtmlElement.div().style("padding-top", 240).add(TextData.toHtml(description, book))
-    );
+  public HtmlElement toHTML(BookData book) {
+    return makeTitleHTML();
   }
 }

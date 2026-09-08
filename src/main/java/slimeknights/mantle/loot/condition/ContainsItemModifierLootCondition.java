@@ -12,6 +12,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.resources.ResourceLocation;
 import slimeknights.mantle.Mantle;
+import slimeknights.mantle.data.loadable.common.IngredientLoadable;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -45,7 +46,7 @@ public class ContainsItemModifierLootCondition implements ILootModifierCondition
   public JsonObject serialize(JsonSerializationContext context) {
     JsonObject json = new JsonObject();
     json.addProperty("type", ID.toString());
-    json.add("ingredient", ingredient.toJson());
+    json.add("ingredient", IngredientLoadable.DISALLOW_EMPTY.serialize(ingredient));
     if (amountNeeded != 1) {
       json.addProperty("needed", amountNeeded);
     }
@@ -55,7 +56,7 @@ public class ContainsItemModifierLootCondition implements ILootModifierCondition
   /** Parses this from JSON */
   public static ContainsItemModifierLootCondition deserialize(JsonElement element, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
     JsonObject json = GsonHelper.convertToJsonObject(element, "condition");
-    Ingredient ingredient = Ingredient.fromJson(GsonHelper.getAsJsonObject(json, "ingredient"));
+    Ingredient ingredient = IngredientLoadable.DISALLOW_EMPTY.getIfPresent(json, "ingredient");
     int needed = GsonHelper.getAsInt(json, "needed", 1);
     return new ContainsItemModifierLootCondition(ingredient, needed);
   }

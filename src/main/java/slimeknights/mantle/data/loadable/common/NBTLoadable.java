@@ -12,7 +12,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import slimeknights.mantle.data.loadable.Loadable;
 import slimeknights.mantle.data.loadable.field.LoadableField;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
-import slimeknights.mantle.util.JsonHelper;
 import slimeknights.mantle.util.typed.TypedMap;
 
 import javax.annotation.Nullable;
@@ -32,9 +31,11 @@ public enum NBTLoadable implements RecordLoadable<CompoundTag> {
 
   @Override
   public CompoundTag convert(JsonElement element, String key, TypedMap context) {
-    if (this == ALLOW_STRING && !element.isJsonObject()) {
+    if (this == ALLOW_STRING && element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
       try {
-        return TagParser.parseTag(JsonHelper.DEFAULT_GSON.toJson(element));
+        // Gson.toJson(JsonElement) wraps JSON strings in quotes. TagParser expects
+        // the SNBT payload itself, so parse the primitive's contents directly.
+        return TagParser.parseTag(element.getAsString());
       } catch (CommandSyntaxException e) {
         throw new JsonSyntaxException("Invalid NBT Entry: ", e);
       }

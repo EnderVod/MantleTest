@@ -5,8 +5,8 @@ import com.google.gson.JsonElement;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import net.minecraftforge.common.crafting.conditions.TrueCondition;
+import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.common.conditions.TrueCondition;
 import slimeknights.mantle.client.book.BookLoader;
 import slimeknights.mantle.client.book.IHTML;
 import slimeknights.mantle.client.book.data.content.ContentError;
@@ -157,8 +157,10 @@ public class SectionData implements IDataItem, IConditional, IHTML {
       return HtmlSerializable.EMPTY;
     }
     String title = getTitle();
-    return HtmlElement.indent("a").href("../page-" + (pageNumber / 2) + "/#" + name + '.' + firstPage.name).add(
-      HtmlElement.div().classes("grid-icon").minetip(title).add(HtmlElement.p().add(title))
-    );
+    return HtmlElement.div()
+      .minetip(title)
+      .add(HtmlElement.a().href("../page-" + (pageNumber / 2) + "/#" + name + '.' + firstPage.name)
+        .add(HtmlElement.img().src("/assets/images/book/icons/blank.png"))) // TODO: make this not an image
+      .add(HtmlElement.p().add(title));
   }
 }
