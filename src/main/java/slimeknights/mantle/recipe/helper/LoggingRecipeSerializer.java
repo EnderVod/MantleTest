@@ -59,7 +59,10 @@ public interface LoggingRecipeSerializer<T extends Recipe<?>> extends RecipeSeri
 
   @Override
   default StreamCodec<RegistryFriendlyByteBuf,T> streamCodec() {
-    return StreamCodec.of((buffer, recipe) -> toNetworkSafe(buffer, recipe), buffer -> fromNetworkSafe(UNKNOWN_ID, buffer));
+    // Force dispatch through the legacy FriendlyByteBuf overload first. Several Tinkers
+    // serializers still override that signature; calling with RegistryFriendlyByteBuf
+    // directly selects the registry-aware default above and bypasses their override.
+    return StreamCodec.of((buffer, recipe) -> toNetworkSafe((FriendlyByteBuf)buffer, recipe), buffer -> fromNetworkSafe(UNKNOWN_ID, buffer));
   }
 
   record LegacySerializer<R extends Recipe<?>>(RecipeSerializer<R> serializer) {
