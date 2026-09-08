@@ -31,6 +31,8 @@ import java.util.function.Supplier;
 public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRecipeSerializer<T> {
   /** JSON field carrying the legacy recipe ID through Minecraft 1.21's codec-only recipe loader. */
   public static final String JSON_RECIPE_ID = "mantle_id";
+  /** Legacy generator field used by early 1.21 port builds. */
+  private static final String LEGACY_JSON_RECIPE_ID = "id";
   /** Context key to use if you want the recipe serializer passed into your recipe */
   public static final ContextKey<RecipeSerializer<?>> SERIALIZER = new ContextKey<>("serializer");
   /** Context key to use if you want a type aware serializer in the recipe, requires {@link #of(RecordLoadable, Supplier)} for your serializer. */
@@ -51,6 +53,11 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
       ResourceLocation id = null;
       if (json.has(JSON_RECIPE_ID)) {
         id = ResourceLocation.parse(json.get(JSON_RECIPE_ID).getAsString());
+      } else if (json.has(LEGACY_JSON_RECIPE_ID)) {
+        // Early 1.21 data generators emitted "id" before the codec bridge settled on
+        // the namespaced Mantle-only key. Accept it so existing generated resources
+        // still provide ContextKey.ID instead of failing recipe deserialization.
+        id = ResourceLocation.parse(json.get(LEGACY_JSON_RECIPE_ID).getAsString());
       }
       return loadable.deserialize(json, buildContext(id).build());
     }, object -> {
