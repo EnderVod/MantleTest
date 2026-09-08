@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
+import slimeknights.mantle.recipe.helper.LoadableRecipeSerializer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -157,7 +158,10 @@ public abstract class AbstractRecipeBuilder<T extends AbstractRecipeBuilder<T>> 
 
     @Override
     public void serializeRecipeData(JsonObject json) {
-      json.addProperty("id", getId().toString());
+      // Minecraft 1.21's recipe serializer codec no longer receives the RecipeHolder ID.
+      // Preserve it in a Mantle-only field so loadables using ContextKey.ID can rebuild
+      // their legacy recipe objects when datapacks are decoded.
+      json.addProperty(LoadableRecipeSerializer.JSON_RECIPE_ID, getId().toString());
       loadable.serialize(recipe, json);
     }
 
